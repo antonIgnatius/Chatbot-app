@@ -7,29 +7,86 @@ import chatbotIcon from '../../assets/chatbot.png'; // Import the chatbot PNG
 const Main = () => {
   const { onSent, recentPrompt, showResult, loading, resultData, setInput, input } = useContext(Context);
   const [darkMode, setDarkMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
 
+  // Toggle dark mode
   const toggleTheme = () => {
     setDarkMode(!darkMode);
   };
 
   // Function to handle card clicks
   const handleCardClick = (prompt) => {
-    console.log('Card clicked with prompt:', prompt); // Debugging log
-    setInput(prompt); // Set the input value to the prompt from the clicked card
-    onSent(); // Trigger the onSent function to simulate the prompt being sent
+    console.log('Card clicked with prompt:', prompt);
+    setInput(prompt); 
   };
 
   // Function to handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && input) {
-      onSent(); // Trigger the onSent function when Enter is pressed
+      console.log('Enter key pressed with input:', input); // Debugging log
+      onSent(); // Trigger the onSent function
+    }
+  };
+
+  // Function to handle gallery selection
+  const handleGallerySelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      console.log('File selected:', file);
+    }
+  };
+
+  // Function to handle voice recording
+  const handleVoiceRecording = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Your browser does not support speech recognition. Please try a different browser.');
+      return;
+    }
+
+    if (isRecording) {
+      // Stop recording
+      recognition.stop();
+      setIsRecording(false);
+    } else {
+      // Start recording
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const newRecognition = new SpeechRecognition();
+      setRecognition(newRecognition);
+
+      newRecognition.continuous = false;
+      newRecognition.interimResults = false;
+      newRecognition.lang = 'en-US';
+
+      newRecognition.onstart = () => {
+        console.log('Voice recording started');
+        setIsRecording(true);
+      };
+
+      newRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice recorded:', transcript);
+        setInput(transcript);
+      };
+
+      newRecognition.onerror = (event) => {
+        console.error('Voice recording error:', event.error);
+        setIsRecording(false);
+      };
+
+      newRecognition.onend = () => {
+        console.log('Voice recording ended');
+        setIsRecording(false);
+      };
+
+      newRecognition.start();
     }
   };
 
   return (
     <div className={`main ${darkMode ? 'dark-mode' : ''}`}>
       <div className="nav">
-        <img src={chatbotIcon} alt="Chatbot" className="chatbot-icon" /> {/* Add chatbot PNG */}
+        <img src={chatbotIcon} alt="Chatbot" className="chatbot-icon" /> 
         <p>Timesheet Buddy</p>
         
         <button className="theme-toggle-btn" onClick={toggleTheme}>
@@ -90,11 +147,26 @@ const Main = () => {
               value={input} 
               type="text" 
               placeholder="Enter a prompt here" 
-              onKeyPress={handleKeyPress} // Handle Enter key press
+              onKeyPress={handleKeyPress} 
             />
             <div>
-              <img src={assets.gallery_icon} width={30} alt="Gallery" />
-              <img src={assets.mic_icon} width={30} alt="Mic" />
+              <label htmlFor="gallery-upload">
+                <img src={assets.gallery_icon} width={30} alt="Gallery" />
+              </label>
+              <input 
+                id="gallery-upload"
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleGallerySelect} 
+              />
+              <img 
+                src={assets.mic_icon} 
+                width={30} 
+                alt="Mic" 
+                onClick={handleVoiceRecording} 
+                style={{ cursor: 'pointer' }}
+              />
               {input ? <img onClick={() => onSent()} src={assets.send_icon} width={30} alt="Send" className="send-btn" /> : null}
             </div>
           </div>
